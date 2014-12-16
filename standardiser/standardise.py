@@ -44,7 +44,6 @@ from standardiser.utils import StandardiseException, sanity_check, timeout
 
 @timeout()
 def apply(input_mol, output_rules_applied=None): 
-
     # Get input molecule...
 
     if type(input_mol) == Chem.rdchem.Mol:
@@ -81,45 +80,65 @@ def apply(input_mol, output_rules_applied=None):
     non_salt_frags = []
 
     mol = break_bonds.apply(mol)
-
+    inorganic_count = 0
+    salt_count = 0
     for n, frag in enumerate(Chem.GetMolFrags(mol, asMols=True), 1):
-
+        thispassrules = []
+        changes = {}
         logger.debug("Starting fragment {n} '{smi}'...".format(n=n, smi=Chem.MolToSmiles(frag)))
 
         logger.debug("1) Check for non-organic elements...")
 
-        if unsalt.is_nonorganic(frag): continue
+        if unsalt.is_nonorganic(frag): 
+            inorganic_count += 1
+            continue
 
         logger.debug("2) Attempting to neutralise (first pass)...")
 
-        frag = neutralise.apply(frag)
+        neutfrag = neutralise.apply(frag)
+        neutralised = False
+        if neutfrag != frag:
+            neutralised = True
 
         logger.debug("3) Applying rules...")
 
-        frag = rules.apply(frag, output_rules_applied=output_rules_applied)
+        tautfrag = rules.apply(neutfrag, output_rules_applied=thispassrules)
+
 
         logger.debug("4) Attempting to neutralise (second pass)...")
 
-        frag = neutralise.apply(frag)
+        neutfrag2 = neutralise.apply(tautfrag)
+
+        if neutfrag2 != tautfrag:
+            neutralised = True
+
 
         logger.debug("5) Checking if frag is a salt/solvate...")
 
-        if unsalt.is_salt(frag): continue
+        if unsalt.is_salt(frag): 
+            salt_count += 1
+            continue
 
         logger.debug("...fragment kept.")
 
+
         non_salt_frags.append(frag)
+        output_rules_applied.extend(thispassrules)
 
     if len(non_salt_frags) == 0:
+        output_rules_applied.append(("no_non_salt", "ERROR"))
 
-        raise StandardiseException("no_non_salt")
+        # raise StandardiseException("no_non_salt")
 
     if len(non_salt_frags) > 1:
+        output_rules_applied.append(("multi_component", "ERROR"))
+        # raise StandardiseException("multi_component")
 
-        raise StandardiseException("multi_component")
 
     parent = non_salt_frags[0]
-
+    
+    output_rules_applied.append(("inorganic_count", inorganic_count))
+    output_rules_applied.append(("salt_count", salt_count))
     ######
 
     # Return parent in same format as input...

@@ -167,7 +167,7 @@ def apply(mol, first_only=False, verbose=False, output_rules_applied=None):
 
                 mol = product
 
-                if output_rules_applied is not None: output_rules_applied.append(rule["n"])
+                if output_rules_applied is not None: output_rules_applied.append(("tautomer_" + rule["name"], {}))
 
                 if first_only: break
 
@@ -180,6 +180,7 @@ def apply(mol, first_only=False, verbose=False, output_rules_applied=None):
         if n_hits_for_pass == 0: break
 
     setAllHsExplicit(mol) 
+    output_rules_applied.append(("tautomer_count", len(output_rules_applied)))
 
     return mol
 
