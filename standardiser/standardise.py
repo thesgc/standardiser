@@ -43,7 +43,7 @@ from standardiser.utils import StandardiseException, sanity_check, timeout
 ########################################################################
 
 #@timeout()
-def apply(input_mol, output_rules_applied=None): 
+def apply(input_mol, output_rules_applied=None, errors=None): 
     # Get input molecule...
 
     if type(input_mol) == Chem.rdchem.Mol:
@@ -126,12 +126,16 @@ def apply(input_mol, output_rules_applied=None):
         output_rules_applied.extend(thispassrules)
 
     if len(non_salt_frags) == 0:
-        output_rules_applied.append(("no_non_salt", "ERROR"))
+        if salt_count == 0:
+            errors["fully_inorganic"] = True
+        else:
+            errors["no_non_salt"] = True
+
 
         # raise StandardiseException("no_non_salt")
 
     if len(non_salt_frags) > 1:
-        output_rules_applied.append(("multi_component", "ERROR"))
+        errors["mixture"] = True
         # raise StandardiseException("multi_component")
 
 
