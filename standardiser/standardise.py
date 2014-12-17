@@ -42,7 +42,7 @@ from standardiser.utils import StandardiseException, sanity_check, timeout
 
 ########################################################################
 
-@timeout()
+#@timeout()
 def apply(input_mol, output_rules_applied=None): 
     # Get input molecule...
 
